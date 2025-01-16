@@ -54,6 +54,38 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 	<input type = "checkbox" checked onclick = "scene.separateParticles = !scene.separateParticles">Separate Particles &nbsp;
 	PIC
 	<input type = "range" min = "0" max = "10" value = "9" class = "slider" onchange="scene.flipRatio = 0.1 * this.value"> FLIP 
+	<div style="margin:10px 0;">
+		<label>Gravity:
+			<input type="range" min="-20" max="20" step="0.1" value="0" 
+				oninput="scene.gravity = parseFloat(this.value)">
+		</label>
+		<label>Time Step (dt):
+			<input type="range" min="0.001" max="0.02" step="0.001" value="0.0083"
+				oninput="scene.dt = parseFloat(this.value)">
+		</label>
+		<label>flipRatio:
+			<input type="range" min="0" max="1" step="0.01" value="0.9" 
+				oninput="scene.flipRatio = parseFloat(this.value)">
+		</label>
+	</div>
+	<div style="margin:10px 0;">
+		<label>numPressureIters:
+			<input type="range" min="1" max="200" step="1" value="100"
+				oninput="scene.numPressureIters = parseInt(this.value)">
+		</label>
+		<label>numParticleIters:
+			<input type="range" min="0" max="10" step="1" value="2"
+				oninput="scene.numParticleIters = parseInt(this.value)">
+		</label>
+		<label>overRelaxation:
+			<input type="range" min="0.5" max="2" step="0.1" value="1.9"
+				oninput="scene.overRelaxation = parseFloat(this.value)">
+		</label>
+		<label>Obstacle Radius:
+			<input type="range" min="0.05" max="2" step="0.05" value="0.15"
+				oninput="scene.obstacleRadius = parseFloat(this.value)">
+		</label>
+	</div>
 <br>
 	<canvas id="myCanvas" style="border:2px solid"></canvas>
 	
@@ -61,8 +93,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 	var canvas = document.getElementById("myCanvas");
 	var gl = canvas.getContext("webgl");	
-	canvas.width = window.innerWidth - 20;
-	canvas.height = window.innerHeight - 20;
+	// canvas.width = window.innerWidth - 20;
+	// canvas.height = window.innerHeight - 20;
+	canvas.width = 240 * 4;
+	canvas.height = 240 * 4;
 
 	canvas.focus();
 
@@ -89,6 +123,57 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 			return x;
 	}
 
+	function isWithinCircle(x, y, centerX, centerY, radius) 
+	{
+    	return (x - centerX) ** 2 + (y - centerY) ** 2 <= radius ** 2;
+	}
+
+	function drawRoundedGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#3498db";
+
+            let cubeIdxR = 0;
+            let cursorX, cursorY;
+            let row = 0;
+            let numRowR = 18;
+            let numCubePerRowR = 20;
+            let _numCubePerRowR = 0;
+
+            cursorY = centerY - (numRowR / 2) * (cubeHR + gapR);
+
+            for (let c = 0; c < numRowR; c++) {
+                row++;
+                if (row === 1 || row === 15) {
+                    _numCubePerRowR = numCubePerRowR - 2;
+                } else if ([3, 4, 5, 11, 12, 13].includes(row)) {
+                    _numCubePerRowR = numCubePerRowR + 2;
+                } else if ([6, 7, 8, 9, 10].includes(row)) {
+                    _numCubePerRowR = numCubePerRowR + 4;
+                } else if (row === 16) {
+                    _numCubePerRowR = numCubePerRowR - 4;
+                } else {
+                    _numCubePerRowR = numCubePerRowR;
+                }
+
+                cursorX = centerX - (_numCubePerRowR / 2) * (cubeWR + gapR);
+
+                if (row === numRowR - 2) {
+                    cursorX += (cubeWR + gapR) * 3;
+                }
+
+                for (let h = 0; h < _numCubePerRowR; h++) {
+                    if (cubeIdxR < totalCells) {
+                        ctx.beginPath();
+                        ctx.rect(cursorX, cursorY, cubeWR, cubeHR);
+                        ctx.fill();
+                        ctx.closePath();
+                        cursorX += cubeWR + gapR;
+                        cubeIdxR++;
+                    }
+                }
+                cursorY += cubeHR + gapR;
+            }
+        }
 	// ----------------- start of simulator ------------------------------
 
 	class FlipFluid {
@@ -666,8 +751,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 	var scene = 
 	{
-		gravity : -9.81,
-//		gravity : 0.0,
+//		gravity : -9.81,
+		gravity : 0.0,
 		dt : 1.0 / 120.0,
 		flipRatio : 0.9,
 		numPressureIters : 100,
@@ -684,7 +769,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		obstacleVelX: 0.0,
 		obstacleVelY: 0.0,
 		showParticles: true,
-		showGrid: false,
+		showGrid: true,
 		fluid: null
 	};
 
@@ -697,7 +782,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		scene.numPressureIters = 50;
 		scene.numParticleIters = 2;
 
-		var res = 100;
+		// var res = 100;
+		var res = 20;
 		
 		var tankHeight = 1.0 * simHeight;
 		var tankWidth = 1.0 * simWidth;
