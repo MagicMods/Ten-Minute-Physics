@@ -30,7 +30,7 @@ class FluidSim {
     };
 
     // Initialize arrays
-    this.particleCount = 100;
+    this._particleCount = 100;
     this.particles = [];
 
     // Initialize mouse state
@@ -63,6 +63,15 @@ class FluidSim {
     });
   }
 
+  get particleCount() {
+    return this._particleCount;
+  }
+
+  set particleCount(newCount) {
+    this._particleCount = newCount;
+    this.addInitialParticles();
+  }
+
   async initialize() {
     try {
       // Initialize shader manager
@@ -92,25 +101,17 @@ class FluidSim {
   }
 
   addInitialParticles() {
-    const spacing = 0.1;
-    const startX = -0.4;
-    const startY = 0.4; // Start from top
-
-    for (let i = 0; i < 10; i++) {
-      for (let j = 0; j < 10; j++) {
-        const x = startX + i * spacing;
-        const y = startY - j * spacing;
-        this.particles.push({
-          x: x,
-          y: y,
-          vx: 0,
-          vy: 0,
-        });
-      }
+    // (Re)create particles based on the current particleCount value.
+    this.particles = [];
+    // Create particles in a pattern or random distribution:
+    const n = this._particleCount;
+    for (let i = 0; i < n; i++) {
+      // Example: place particles in a grid pattern.
+      const x = Math.random() * 2 - 1;
+      const y = Math.random() * 2 - 1;
+      this.particles.push({ x, y, vx: 0, vy: 0 });
     }
-    console.log(
-      `Created ${this.particles.length} initial particles in grid pattern`
-    );
+    console.log(`Created ${n} particles`);
   }
 
   setupMouseHandlers() {
@@ -125,11 +126,11 @@ class FluidSim {
       this.mouse.y = pos.y;
       this.mouse.prevX = pos.x;
       this.mouse.prevY = pos.y;
-      console.log("🖱️ Mouse DOWN:", {
-        normalized: pos,
-        screen: { x: e.clientX, y: e.clientY },
-        state: { ...this.mouse },
-      });
+      // console.log("🖱️ Mouse DOWN:", {
+      //   normalized: pos,
+      //   screen: { x: e.clientX, y: e.clientY },
+      //   state: { ...this.mouse },
+      // });
     });
 
     this.canvas.addEventListener("mousemove", (e) => {
