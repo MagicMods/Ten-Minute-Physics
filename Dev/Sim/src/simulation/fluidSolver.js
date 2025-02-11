@@ -16,6 +16,13 @@ class FluidSolver {
     this.height = gridHeight;
     this.timeStep = timeStep;
 
+    // Exposed properties for UI control
+    this.config = {
+      viscosity: 0.1,
+      diffusion: 0.01,
+      pressure: 0.5,
+    };
+
     // Initialize particle arrays (start with 100 particles)
     this.numParticles = 100;
     this.particles = new Float32Array(this.numParticles * 2); // x,y positions

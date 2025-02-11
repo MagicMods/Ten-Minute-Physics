@@ -40,10 +40,27 @@ class FluidSim {
       y: 0,
       prevX: 0,
       prevY: 0,
+      forceMultiplier: 50,
+      radius: 20,
+      color: [1, 0, 0, 0.5],
+      showDebug: true,
     };
+
+    // Initialize handlers
+    this.setupMouseHandlers();
 
     // Add state manager
     this.stateManager = new StateManager();
+
+    // Extend FluidSolver initialization
+    this.fluidSolver = new FluidSolver({
+      width: this.width,
+      height: this.height,
+      timeStep: 1 / 60,
+      viscosity: 0.1,
+      diffusion: 0.01,
+      pressure: 0.5,
+    });
   }
 
   async initialize() {
@@ -108,7 +125,11 @@ class FluidSim {
       this.mouse.y = pos.y;
       this.mouse.prevX = pos.x;
       this.mouse.prevY = pos.y;
-      console.log("Mouse down:", pos);
+      console.log("🖱️ Mouse DOWN:", {
+        normalized: pos,
+        screen: { x: e.clientX, y: e.clientY },
+        state: { ...this.mouse },
+      });
     });
 
     this.canvas.addEventListener("mousemove", (e) => {
@@ -118,9 +139,15 @@ class FluidSim {
       const dx = pos.x - this.mouse.prevX;
       const dy = pos.y - this.mouse.prevY;
 
-      if (dx !== 0 || dy !== 0) {
-        console.log("Mouse force:", { x: pos.x, y: pos.y, dx, dy });
-        this.solver.applyForce(pos.x, pos.y, dx, dy);
+      // console.log("🖱️ Mouse MOVE:", {
+      //   pos,
+      //   delta: { dx, dy },
+      //   state: { ...this.mouse },
+      // });
+
+      // Apply force only if there's movement
+      if (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) {
+        this.applyMouseForce(pos.x, pos.y, dx, dy);
       }
 
       this.mouse.prevX = pos.x;
@@ -128,12 +155,13 @@ class FluidSim {
     });
 
     this.canvas.addEventListener("mouseup", () => {
-      console.log("Mouse up");
       this.mouse.down = false;
+      // console.log("🖱️ Mouse UP:", { state: { ...this.mouse } });
     });
 
     this.canvas.addEventListener("mouseleave", () => {
       this.mouse.down = false;
+      // console.log("🖱️ Mouse LEAVE:", { state: { ...this.mouse } });
     });
 
     console.log("Mouse handlers initialized");
@@ -141,8 +169,16 @@ class FluidSim {
 
   getMousePosition(e) {
     const rect = this.canvas.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * this.width;
-    const y = ((e.clientY - rect.top) / rect.height) * this.height;
+    // Convert to normalized coordinates (-1 to 1)
+    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -(((e.clientY - rect.top) / rect.height) * 2) + 1;
+
+    // console.log("🖱️ Mouse position:", {
+    //   screen: { x: e.clientX, y: e.clientY },
+    //   canvas: { x, y },
+    //   rect: { w: rect.width, h: rect.height },
+    // });
+
     return { x, y };
   }
 
@@ -249,6 +285,38 @@ class FluidSim {
         particle.vy = (particle.vy - 2 * dot * ny) * this.physics.damping;
       }
     }
+  }
+
+  applyMouseForce(x, y, dx, dy) {
+    if (!this.mouse.down) return;
+
+    const force = {
+      x: dx * this.mouse.forceMultiplier,
+      y: dy * this.mouse.forceMultiplier,
+    };
+
+    let affectedCount = 0;
+    const radius = this.mouse.radius * 0.1; // Scale to normalized space
+
+    for (let particle of this.particles) {
+      const distX = particle.x - x;
+      const distY = particle.y - y;
+      const dist = Math.sqrt(distX * distX + distY * distY);
+
+      if (dist < radius) {
+        const factor = 1 - dist / radius;
+        particle.vx += force.x * factor;
+        particle.vy += force.y * factor;
+        affectedCount++;
+      }
+    }
+
+    // console.log("🖱️ Force Applied:", {
+    //   force,
+    //   affected: affectedCount,
+    //   mouse: { x, y, radius },
+    //   particles: this.particles.length,
+    // });
   }
 }
 
